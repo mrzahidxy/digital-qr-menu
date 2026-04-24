@@ -1,0 +1,9 @@
+{
+  "watch": ["src", "prisma/seed.ts"],
+  "ext": "ts",
+  "ignore": ["dist"],
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "exec": "ts-node --project tsconfig.json src/server.ts"
+}

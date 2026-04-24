@@ -1,0 +1,8 @@
+export { default as AnalyticsPage } from './analytics/page'
+export { default as DashboardPage } from './dashboard/page'
+export { default as MenuPage } from './menu/page'
+export { default as BrandingPage } from './branding/page'
+export { default as QrPage } from './qr/page'
+export { default as OrdersPage } from './OrdersPage'
+export { default as SettingsPage } from './settings/page'
+export { default as TeamPage } from './team/page'

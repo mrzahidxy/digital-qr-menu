@@ -1,0 +1,281 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  STAFF
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MenuStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Badge {
+  VEGAN
+  SPICY
+  NONE
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  CANCELLED
+}
+
+enum LicensePlan {
+  MONTHLY
+  YEARLY
+  LIFETIME
+}
+
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  GUEST
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String
+  role            UserRole
+  isActive        Boolean        @default(true)
+  fullName        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  ownedBusinesses Business[]     @relation("BusinessOwner")
+  memberships     BusinessUser[]
+  auditLogs       AuditLog[]     @relation("AuditActor")
+
+  @@map("users")
+}
+
+model Business {
+  id                      String          @id @default(uuid())
+  ownerId                 String
+  name                    String
+  slug                    String          @unique
+  description             String?
+  logoUrl                 String?
+  coverImageUrl           String?
+  primaryColor            String?
+  accentColor             String?
+  fontFamily              String?
+  customDomain            String?
+  status                  BusinessStatus  @default(ACTIVE)
+  isPublicOrderingEnabled Boolean         @default(true)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  owner                   User            @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  users                   BusinessUser[]
+  menus                   Menu[]
+  licenses                LicenseKey[]
+  orders                  Order[]
+  qrSettings              QrSettings?
+  auditLogs               AuditLog[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("businesses")
+}
+
+model BusinessUser {
+  id          String    @id @default(uuid())
+  businessId  String
+  userId      String
+  role        UserRole
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([businessId, role])
+  @@index([userId])
+  @@map("business_users")
+}
+
+model Menu {
+  id                String      @id @default(uuid())
+  businessId        String
+  name              String
+  slug              String
+  description       String?
+  status            MenuStatus  @default(DRAFT)
+  isDefault         Boolean     @default(false)
+  publishedAt       DateTime?
+  lastRevalidatedAt DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  business          Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  categories        Category[]
+  orders            Order[]
+
+  @@unique([businessId, slug])
+  @@index([businessId, status])
+  @@index([businessId, isDefault])
+  @@map("menus")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  menuId      String
+  name        String
+  description String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  menu        Menu      @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items       Item[]
+
+  @@index([menuId, sortOrder])
+  @@map("categories")
+}
+
+model Item {
+  id           String      @id @default(uuid())
+  categoryId   String
+  name         String
+  description  String?
+  priceCents   Int
+  badge        Badge       @default(NONE)
+  photoUrl     String?
+  isAvailable  Boolean     @default(true)
+  soldOutUntil DateTime?
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  category     Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+
+  @@index([categoryId, sortOrder])
+  @@index([name])
+  @@map("items")
+}
+
+model QrSettings {
+  id                String    @id @default(uuid())
+  businessId        String    @unique
+  publicSlug        String?
+  includeLogo       Boolean   @default(true)
+  foregroundColor   String?
+  backgroundColor   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  business          Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("qr_settings")
+}
+
+model Order {
+  id            String       @id @default(uuid())
+  businessId    String
+  menuId        String
+  orderRef      String       @unique
+  guestName     String?
+  tableLabel    String?
+  orderNote     String?
+  status        OrderStatus  @default(RECEIVED)
+  submittedAt   DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  business      Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  menu          Menu         @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+
+  @@index([businessId, submittedAt])
+  @@index([businessId, status, submittedAt])
+  @@index([menuId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String    @id @default(uuid())
+  orderId          String
+  itemId           String?
+  itemNameSnapshot String
+  priceSnapshot    Int
+  quantity         Int
+  createdAt        DateTime  @default(now())
+
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item               Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([itemId])
+  @@map("order_items")
+}
+
+model LicenseKey {
+  id               String         @id @default(uuid())
+  businessId       String
+  key              String         @unique
+  plan             LicensePlan
+  status           LicenseStatus  @default(ACTIVE)
+  domain           String?
+  issuedAt         DateTime       @default(now())
+  expiresAt        DateTime?
+  currentPeriodEnd DateTime?
+  signature        Bytes?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  business         Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, status])
+  @@index([domain])
+  @@map("license_keys")
+}
+
+model AuditLog {
+  id         String         @id @default(uuid())
+  businessId String?
+  actorId    String?
+  actorType  AuditActorType @default(USER)
+  action     String
+  entity     String
+  entityId   String?
+  ip         String?
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+
+  business   Business?      @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  actor      User?          @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
