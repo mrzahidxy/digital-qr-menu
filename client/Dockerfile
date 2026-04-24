@@ -12,7 +12,7 @@ FROM deps AS builder
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 COPY . .
-RUN npm run build
+RUN NEXTAUTH_SECRET=ci-build-placeholder npm run build
 
 FROM base AS production
 ENV NODE_ENV=production
