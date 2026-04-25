@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { Prisma, User, UserRole } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
