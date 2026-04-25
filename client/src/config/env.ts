@@ -23,6 +23,12 @@ if (!parsed.success) {
   throw new Error('Environment validation failed')
 }
 
+const isProduction = parsed.data.NODE_ENV === 'production'
+
+if (isProduction && !parsed.data.NEXT_PUBLIC_API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_BASE_URL is required in production builds')
+}
+
 export const env = {
   ...parsed.data,
   NEXT_PUBLIC_SITE_URL: parsed.data.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',

@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM deps AS builder
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 COPY . .
 RUN NEXTAUTH_SECRET=ci-build-placeholder npm run build
