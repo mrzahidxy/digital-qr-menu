@@ -50,7 +50,7 @@ services:
       DIRECT_URL: postgresql://${POSTGRES_USER:-app_user}:${POSTGRES_PASSWORD:-app_password}@db:5432/${POSTGRES_DB:-app_db}?schema=public
       REDIS_URL: redis://redis:6379
     command: >
-      sh -c "npx prisma migrate deploy && node dist/server.js"
+      sh -c "npx prisma migrate deploy && node dist/src/server.js"
     healthcheck:
       test:
         [
