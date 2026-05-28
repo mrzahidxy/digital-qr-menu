@@ -13,7 +13,7 @@ const envSchema = z.object({
   LOG_DB_ENABLED: z.coerce.boolean().default(true),
   PRISMA_QUERY_LOG: z.enum(['true', 'false']).default('false').transform((value) => value === 'true'),
   PORT: z.coerce.number().default(8080),
-  HOST: z.string().default('127.0.0.1'),
+  HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET should be at least 16 characters long'),

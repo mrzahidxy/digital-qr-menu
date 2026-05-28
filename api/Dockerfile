@@ -1,31 +1,43 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-slim AS base
-WORKDIR /app
-ENV npm_config_cache=/tmp/.npm-cache
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine AS deps
 
-FROM base AS deps
-COPY package.json package-lock.json ./
-COPY prisma/schema.prisma ./prisma/schema.prisma
+WORKDIR /app
+
+COPY package*.json ./
+COPY prisma ./prisma
+
 RUN npm ci
 
-FROM deps AS builder
-COPY tsconfig.json ./
-COPY prisma ./prisma
-COPY src ./src
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NODE_ENV=production
+
+RUN npm run prisma:generate
 RUN npm run build
 
-FROM deps AS production-deps
-RUN npm prune --omit=dev
+FROM node:20-alpine AS runner
 
-FROM base AS production
+WORKDIR /app
+
 ENV NODE_ENV=production
-COPY package.json package-lock.json ./
+ENV PORT=8080
+ENV HOST=0.0.0.0
+
+COPY package*.json ./
 COPY prisma ./prisma
-COPY --from=production-deps /app/node_modules ./node_modules
+
+RUN npm ci --omit=dev
+
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 EXPOSE 8080
-CMD ["node", "dist/src/server.js"]
+
+CMD ["npm", "run", "start"]
